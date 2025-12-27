@@ -2,7 +2,7 @@
 # IMPORTS
 # ===============================
 import streamlit as st
-from rdkit.Chem import Draw
+from rdkit.Chem.Draw import rdMolDraw2D
 import pandas as pd
 import numpy as np
 import joblib
@@ -349,3 +349,4 @@ else:
 
     if st.button("Predict Activity"):
         single_smiles_predict(smiles_input, models)
+
