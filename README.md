@@ -103,7 +103,7 @@ We thank **Central University of Rajasthan** for infrastructure support.
 
 For queries, please contact:
 
-📩 *avindkayande0007@gmail.com*  
+📩 *avikayande0007@gmail.com*  
 📩 *2022phdbt010@curaj.ac.in*
 
 ---
