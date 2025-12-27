@@ -4,3 +4,12 @@ numpy>=2.1.0
 joblib
 scikit-learn==1.6.1
 rdkit
+streamlit
+pandas
+numpy
+scikit-learn
+rdkit
+joblib
+matplotlib
+seaborn
+fpdf
