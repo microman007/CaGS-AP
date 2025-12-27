@@ -12,6 +12,7 @@ from rdkit.Chem.Scaffolds import MurckoScaffold
 import warnings
 from rdkit import Chem
 from rdkit.Chem import AllChem, MACCSkeys
+from rdkit.Chem import Draw
 from rdkit import RDLogger
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -348,5 +349,6 @@ else:
 
     if st.button("Predict Activity"):
         single_smiles_predict(smiles_input, models)
+
 
 
