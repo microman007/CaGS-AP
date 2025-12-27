@@ -8,7 +8,7 @@ This tool enables **virtual screening, hit-prioritization, and activity confiden
 
 ## 🏛 Affiliation
 
-**Fungal Biology Laboratory**  
+**Fungal Biology Lab**  
 **Central University of Rajasthan, India**
 
 **Authors**
@@ -37,20 +37,32 @@ The tool is implemented in **Python + Streamlit**, supporting both **batch scree
 ### 1️⃣ Clone the repository
 git clone https://github.com/microman007/CaGS-AP.git
 cd CaGS-AP
+
 ### 2️⃣ Install dependencies
 pip install -r requirements.txt
+
 ### 3️⃣ Run the App
 streamlit run app.py
+
 The app will open in your browser automatically.
+
 ---
 ## 📂 Input Format
 
 Upload a `.csv` file containing a column with **SMILES** strings.
 
-Example: SMILES
-CCOc1ccc2nc(SCc3ccccc3)sc2c1CCC(=O)NCCC1=CNc2ccccc21
+Example:
 
-The app will output predicted activity & ranked probability.
+SMILES
+CCOc1ccc2nc(SCc3ccccc3)sc2c1
+CCC(=O)NCCC1=CNc2ccccc21
+
+The app will output:
+
+• predicted activity probability
+• model vote
+• prediction confidence
+• ranked hit list
 
 ---
 
@@ -70,14 +82,14 @@ The app will output predicted activity & ranked probability.
 ## ⚖ License
 
 This project is released under the **MIT License**.  
-You are free to use, modify, and distribute with citation.
+You are free to use, modify, and distribute this software with appropriate citation.
 
 ---
 
 ## 🧪 Intended Use
 
 This tool is developed **for academic research & drug discovery workflow support**.  
-It does not replace experimental validation.
+It is not intended for clinical or diagnostic use. Experimental validation is essential.
 
 ---
 
