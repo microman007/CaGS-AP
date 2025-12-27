@@ -13,3 +13,4 @@ joblib
 matplotlib
 seaborn
 fpdf
+imblearn
