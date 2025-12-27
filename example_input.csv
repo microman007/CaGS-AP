@@ -1,0 +1,11 @@
+SMILES
+CCOc1ccc2nc(SCc3ccccc3)sc2c1CCC(=O)NCCC1=CNc2ccccc21
+CCCCN(CCCOC(=O)c1ccc(Cl)cc1)C(=O)Cc1ccc(F)cc1
+CC1=C(C2=CC=CC=C2)SC(=N1)NC(=O)N(CCCl)CCCl
+COc1ccc2nc(SCc3ccc(Cl)cc3)sc2c1N
+CC(C)NCC(O)COC1=CC=CC=C1Cl
+CC(C)Oc1ccc2nc(NCCN)sc2c1
+CCN(CC)CCOC(=O)c1ccc(F)cc1
+CC(C)COC(=O)c1ccc2nc(SCc3ccccc3)sc2c1
+CCCSc1nc2ccccc2s1
+CC(C)NCCOC(=O)c1ccc2nc(SC)sc2c1
