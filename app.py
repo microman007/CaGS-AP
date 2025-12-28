@@ -20,16 +20,52 @@ from fpdf import FPDF
 
 
 # ===============================
-# CONFIG
+# HEADER — LOGO + FULL-WIDTH TITLE
 # ===============================
-RDLogger.DisableLog('rdApp.*')
-warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
+from PIL import Image
 
-st.set_page_config(
-    page_title="CaGS-AP: Candida albicans β-1,3-glucan synthase Activity Predictor",
-    page_icon="🧬",
-    layout="wide"
-)
+st.markdown("""
+<style>
+.header-box{
+    text-align:center;
+    padding-top:6px;
+}
+.app-title{
+    font-size:30px;
+    font-weight:700;
+    line-height:1.25;
+}
+.app-sub{
+    font-size:15px;
+    color:grey;
+}
+</style>
+""", unsafe_allow_html=True)
+
+with st.container():
+    st.markdown("<div class='header-box'>", unsafe_allow_html=True)
+
+    # ---- LOGO ----
+    try:
+        logo = Image.open("App_Logo.png")
+        st.image(logo, width=2000)
+    except:
+        pass
+
+    # ---- TITLE ----
+    st.markdown("""
+        <div class='app-title'>
+            🧬 CaGS-AP: Candida albicans β-1,3-glucan synthase — Activity Predictor
+        </div>
+
+        <div class='app-sub'>
+            Machine-learning prediction of β-1,3-glucan synthase inhibitors
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+st.markdown("---")
 
 MODEL_DIR = "final_models"
 CHUNK_SIZE = 10000
@@ -349,6 +385,7 @@ else:
 
     if st.button("Predict Activity"):
         single_smiles_predict(smiles_input, models)
+
 
 
 
