@@ -1,7 +1,7 @@
-# CaGS-AP : Candida albicans β-1,3-Glucan Synthase — Activity Predictor
+# CaGS-AP : _Candida albicans_ β-1,3-Glucan Synthase — Activity Predictor
 <img width="1280" height="720" alt="App_Logoo" src="https://github.com/user-attachments/assets/12e059f0-416a-4336-aaa3-150d34621742" />
 
-CaGS-AP is a machine-learning powered platform for predicting the inhibitory activity of small molecules against **Candida albicans β-1,3-glucan synthase (CaGS)** — a clinically validated antifungal drug target.
+CaGS-AP is a machine-learning powered platform for predicting the inhibitory activity of small molecules against **_Candida albicans_ β-1,3-glucan synthase (CaGS)** — a clinically validated antifungal drug target.
 
 This tool enables **virtual screening, hit-prioritization, and activity confidence assessment** using an ensemble of optimized machine-learning classifiers.
 
