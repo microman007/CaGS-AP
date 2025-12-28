@@ -14,7 +14,7 @@ This tool enables **virtual screening, hit-prioritization, and activity confiden
 
 **Authors**
 - *Arvind V. Kayande*
-- *Prof. Gajanan B. Zore*
+- *Prof. Gajanan B. Zore*(Corresponding Author)
 
 ---
 
