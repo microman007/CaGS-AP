@@ -2,6 +2,9 @@
 # IMPORTS
 # ===============================
 import streamlit as st
+from rdkit import RDLogger
+RDLogger.DisableLog("rdApp.*")
+
 import pandas as pd
 import numpy as np
 import joblib
@@ -12,7 +15,17 @@ from rdkit.Chem.Scaffolds import MurckoScaffold
 import warnings
 from rdkit import Chem
 from rdkit.Chem import AllChem, MACCSkeys
-from rdkit.Chem import Draw
+from rdkit.Chem.Draw import rdMolDraw2D
+from PIL import Image
+import io
+
+def mol_to_image(mol, size=(300, 300)):
+    drawer = rdMolDraw2D.MolDraw2DCairo(size[0], size[1])
+    drawer.DrawMolecule(mol)
+    drawer.FinishDrawing()
+    png = drawer.GetDrawingText()
+    return Image.open(io.BytesIO(png))
+
 from rdkit import RDLogger
 import matplotlib
 matplotlib.use("Agg")
@@ -285,7 +298,7 @@ def single_smiles_predict(smiles, models):
         return
 
     # ----- Show molecule -----
-    st.image(Draw.MolToImage(mol, size=(300,300)))
+    st.image(mol_to_image(mol))
 
     fp = fingerprints_from_smiles(smiles)
     X = pd.DataFrame([fp])
@@ -387,6 +400,7 @@ else:
 
     if st.button("Predict Activity"):
         single_smiles_predict(smiles_input, models)
+
 
 
 
