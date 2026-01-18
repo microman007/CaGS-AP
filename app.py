@@ -15,16 +15,18 @@ from rdkit.Chem.Scaffolds import MurckoScaffold
 import warnings
 from rdkit import Chem
 from rdkit.Chem import AllChem, MACCSkeys
-from rdkit.Chem.Draw import rdMolDraw2D
 from PIL import Image
 import io
+st.code(f"SMILES: {smiles}")
+st.success("Molecule parsed successfully")
+st.info("⚠️ Molecular structure visualization is disabled on Streamlit Cloud due to system limitations.")
 
-def mol_to_image(mol, size=(300, 300)):
-    drawer = rdMolDraw2D.MolDraw2DCairo(size[0], size[1])
-    drawer.DrawMolecule(mol)
-    drawer.FinishDrawing()
-    png = drawer.GetDrawingText()
-    return Image.open(io.BytesIO(png))
+# def mol_to_image(mol, size=(300, 300)):
+#     drawer = rdMolDraw2D.MolDraw2DCairo(size[0], size[1])
+#     drawer.DrawMolecule(mol)
+#     drawer.FinishDrawing()
+#     png = drawer.GetDrawingText()
+#     return Image.open(io.BytesIO(png))
 
 from rdkit import RDLogger
 import matplotlib
@@ -400,6 +402,7 @@ else:
 
     if st.button("Predict Activity"):
         single_smiles_predict(smiles_input, models)
+
 
 
 
