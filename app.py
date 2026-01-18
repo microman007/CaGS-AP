@@ -384,39 +384,40 @@ models = st.sidebar.multiselect(
 # ===============================
 # MODE-1
 # ===============================
-if mode=="Upload CSV":
+if mode == "Upload CSV":
 
-    up=st.sidebar.file_uploader("Upload CSV",type=["csv"])
+    up = st.sidebar.file_uploader("Upload CSV", type=["csv"])
 
-    if up:
-        df=pd.read_csv(up)
+    if up is not None:
+        df = pd.read_csv(up)
 
-        smiles_col = next((c for c in df.columns if "smile" in c.lower()), None)
+        smiles_col = next(
+            (c for c in df.columns if "smile" in c.lower()),
+            None
+        )
 
-        if st.button("Start Virtual Screening"):
+        if smiles_col is None:
+            st.error("No SMILES column found in CSV.")
+        else:
+            if st.button("Start Virtual Screening"):
+                results = run_screening(df, smiles_col, models)
+                results = compute_consensus_metrics(results)
+                results["Confidence"] = results.apply(assign_confidence, axis=1)
+                results["Scaffold"] = results[smiles_col].apply(get_scaffold)
 
-            results = run_screening(df, smiles_col, models)
-            results = compute_consensus_metrics(results)
-            results["Confidence"] = results.apply(assign_confidence, axis=1)
-            results["Scaffold"] = results[smiles_col].apply(get_scaffold)
-
-            st.dataframe(results)
-
+                st.dataframe(results)
 
 # ===============================
 # MODE-2
 # ===============================
-else:
+elif mode == "Predict from SMILES":
+
     st.subheader("🔍 Predict Activity from SMILES")
     smiles_input = st.text_area("Paste SMILES here:")
 
     if st.button("Predict Activity"):
-        single_smiles_predict(smiles_input, models)
-
-
-
-
-
-
-
-
+        if smiles_input.strip() == "":
+            st.warning("Please enter a SMILES string.")
+        else:
+            st.code(f"SMILES: {smiles_input}")
+            single_smiles_predict(smiles_input, models)
