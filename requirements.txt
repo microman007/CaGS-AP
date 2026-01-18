@@ -10,8 +10,5 @@ imbalanced-learn==0.10.1
 
 rdkit-pypi==2022.9.5
 
-matplotlib==3.7.5
-seaborn==0.12.2
-
 fpdf
 Pillow
