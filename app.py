@@ -8,20 +8,21 @@ RDLogger.DisableLog("rdApp.*")
 import sys
 import numpy as np
 
+# ---- NumPy legacy pickle compatibility ----
 sys.modules["numpy._core"] = np.core
 sys.modules["numpy._core.multiarray"] = np.core.multiarray
 sys.modules["numpy._core.umath"] = np.core.umath
 
 import pandas as pd
 import joblib
-
 import os
 import datetime
-from sklearn.neighbors import NearestNeighbors
+
 from rdkit.Chem.Scaffolds import MurckoScaffold
 from rdkit import Chem
 from rdkit.Chem import AllChem, MACCSkeys
 from PIL import Image
+
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -30,7 +31,7 @@ from fpdf import FPDF
 
 
 # ===============================
-# HEADER — LOGO + FULL-WIDTH TITLE
+# HEADER — LOGO + TITLE
 # ===============================
 st.markdown("""
 <style>
@@ -52,7 +53,6 @@ st.markdown("""
 
 with st.container():
     st.markdown("<div class='header-box'>", unsafe_allow_html=True)
-
     try:
         logo = Image.open("App_Logo.png")
         st.image(logo, width=2000)
@@ -67,11 +67,14 @@ with st.container():
             Machine-learning prediction of β-1,3-glucan synthase inhibitors
         </div>
     """, unsafe_allow_html=True)
-
     st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("---")
 
+
+# ===============================
+# GLOBAL SETTINGS
+# ===============================
 MODEL_DIR = "final_models"
 CHUNK_SIZE = 10000
 
@@ -89,7 +92,6 @@ AVAILABLE_MODELS = {
 def get_output_dirs():
     base = "Documents"
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M")
-
     paths = {
         "base": base,
         "ranked": os.path.join(base, "Ranked_Results"),
@@ -97,15 +99,13 @@ def get_output_dirs():
         "reports": os.path.join(base, "Reports"),
         "timestamp": ts
     }
-
     for p in paths.values():
         os.makedirs(p, exist_ok=True)
-
     return paths
 
 
 # ===============================
-# LOADERS
+# SAFE PIPELINE LOADING
 # ===============================
 @st.cache_resource
 def load_pipeline():
@@ -116,21 +116,17 @@ def load_pipeline():
     return tools
 
 
+def safe_get_pipeline():
+    try:
+        return load_pipeline()
+    except Exception as e:
+        st.error("❌ Failed to load preprocessing pipeline.")
+        st.code(str(e))
+        st.stop()
+
+
 def load_model_file(filename):
     return joblib.load(os.path.join(MODEL_DIR, filename))
-
-# ===============================
-# NumPy backward-compatibility patch
-# ===============================
-import sys
-import numpy as np
-
-# Alias old NumPy internal paths used by legacy pickles
-sys.modules["numpy._core"] = np.core
-sys.modules["numpy._core.multiarray"] = np.core.multiarray
-sys.modules["numpy._core.umath"] = np.core.umath
-
-pipeline = load_pipeline()
 
 
 # ===============================
@@ -151,15 +147,15 @@ def fingerprints_from_smiles(smiles):
 # ===============================
 def run_screening(df, smiles_col, models):
 
+    pipeline = safe_get_pipeline()
+
     all_results = []
     total = len(df)
     prog = st.progress(0.0)
 
     for i in range(0, total, CHUNK_SIZE):
-
         chunk = df.iloc[i:i+CHUNK_SIZE].copy()
-        fps = []
-        keep = []
+        fps, keep = [], []
 
         for j, s in enumerate(chunk[smiles_col]):
             fp = fingerprints_from_smiles(s)
@@ -171,7 +167,6 @@ def run_screening(df, smiles_col, models):
             continue
 
         X = pd.DataFrame(fps, index=keep)
-
         X = pipeline["var_thresh"].transform(X)
         X = pipeline["feat_selector"].transform(X)
         X = pipeline["scaler"].transform(X)
@@ -196,12 +191,8 @@ def run_screening(df, smiles_col, models):
         prog.progress(min((i + len(chunk)) / total, 1.0))
 
     prog.empty()
-
     final = pd.concat(all_results)
-    if "Consensus_Probability" in final:
-        final = final.sort_values("Consensus_Probability", ascending=False)
-
-    return final.reset_index(drop=True)
+    return final.sort_values("Consensus_Probability", ascending=False).reset_index(drop=True)
 
 
 # ===============================
@@ -224,9 +215,6 @@ def assign_confidence(row):
     return "Low"
 
 
-# ===============================
-# SCAFFOLD
-# ===============================
 def get_scaffold(smiles):
     mol = Chem.MolFromSmiles(smiles)
     if mol:
@@ -239,13 +227,12 @@ def get_scaffold(smiles):
 # ===============================
 def single_smiles_predict(smiles, models):
 
+    pipeline = safe_get_pipeline()
+
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
         st.error("❌ Invalid SMILES string.")
         return
-
-    st.success("Molecule parsed successfully")
-    st.info("⚠️ Molecular structure visualization is disabled on Streamlit Cloud.")
 
     fp = fingerprints_from_smiles(smiles)
     X = pd.DataFrame([fp])
@@ -254,26 +241,18 @@ def single_smiles_predict(smiles, models):
     X = pipeline["feat_selector"].transform(X)
     X = pipeline["scaler"].transform(X)
 
-    probs = {}
-    votes = 0
-
+    probs, votes = {}, 0
     for m in models:
         model = load_model_file(AVAILABLE_MODELS[m])
         pred = int(model.predict(X)[0])
         votes += pred
         probs[m] = float(model.predict_proba(X)[0, 1])
 
-    mean_prob = np.mean(list(probs.values()))
-    sd_prob = np.std(list(probs.values()))
-
-    conf = "High" if sd_prob < 0.05 else "Moderate" if sd_prob < 0.15 else "Low"
-
-    st.success(f"Predicted Activity Probability: **{mean_prob:.4f}**")
+    st.success(f"Predicted Activity Probability: **{np.mean(list(probs.values())):.4f}**")
     st.write(f"Model Vote: **{votes}/{len(models)}**")
-    st.write(f"Std Dev: **{sd_prob:.4f}**")
-    st.write(f"Confidence: **{conf}**")
+    st.write(f"Confidence: **{assign_confidence(pd.Series({'Prob_SD': np.std(list(probs.values()))}))}**")
     st.write(f"Scaffold: `{get_scaffold(smiles)}`")
-    st.table(pd.DataFrame(probs, index=["Probability"]).T)
+    st.table(pd.DataFrame(probs, index=['Probability']).T)
 
 
 # ===============================
@@ -291,13 +270,10 @@ models = st.sidebar.multiselect(
 )
 
 if mode == "Upload CSV":
-
     up = st.sidebar.file_uploader("Upload CSV", type=["csv"])
-
     if up:
         df = pd.read_csv(up)
         smiles_col = next((c for c in df.columns if "smile" in c.lower()), None)
-
         if smiles_col is None:
             st.error("No SMILES column found.")
         elif st.button("Start Virtual Screening"):
@@ -308,14 +284,8 @@ if mode == "Upload CSV":
             st.dataframe(res)
 
 elif mode == "Predict from SMILES":
-
     st.subheader("🔍 Predict Activity from SMILES")
     smiles_input = st.text_area("Paste SMILES here:")
-
-    if st.button("Predict Activity"):
-        if smiles_input.strip():
-            st.code(f"SMILES: {smiles_input}")
-            single_smiles_predict(smiles_input, models)
-        else:
-            st.warning("Please enter a SMILES string.")
-
+    if st.button("Predict Activity") and smiles_input.strip():
+        st.code(f"SMILES: {smiles_input}")
+        single_smiles_predict(smiles_input, models)
