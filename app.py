@@ -17,7 +17,17 @@ from rdkit import Chem
 from rdkit.Chem import AllChem, MACCSkeys
 from PIL import Image
 import io
-st.code(f"SMILES: {smiles}")
+else:
+    st.subheader("🔍 Predict Activity from SMILES")
+    smiles_input = st.text_area("Paste SMILES here:")
+
+    if st.button("Predict Activity"):
+        if smiles_input.strip() == "":
+            st.warning("Please enter a SMILES string.")
+        else:
+            st.code(f"SMILES: {smiles_input}")
+            single_smiles_predict(smiles_input, models)
+
 st.success("Molecule parsed successfully")
 st.info("⚠️ Molecular structure visualization is disabled on Streamlit Cloud due to system limitations.")
 
@@ -402,6 +412,7 @@ else:
 
     if st.button("Predict Activity"):
         single_smiles_predict(smiles_input, models)
+
 
 
 
