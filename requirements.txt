@@ -3,11 +3,9 @@ pandas
 numpy<2.0
 joblib
 scikit-learn==1.3.2
-rdkit-pypi
+rdkit-pypi==2022.9.5
 matplotlib
 seaborn
 fpdf
 imbalanced-learn
 Pillow
-
-
