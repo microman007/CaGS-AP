@@ -5,9 +5,16 @@ import streamlit as st
 from rdkit import RDLogger
 RDLogger.DisableLog("rdApp.*")
 
-import pandas as pd
+import sys
 import numpy as np
+
+sys.modules["numpy._core"] = np.core
+sys.modules["numpy._core.multiarray"] = np.core.multiarray
+sys.modules["numpy._core.umath"] = np.core.umath
+
+import pandas as pd
 import joblib
+
 import os
 import datetime
 from sklearn.neighbors import NearestNeighbors
@@ -112,6 +119,16 @@ def load_pipeline():
 def load_model_file(filename):
     return joblib.load(os.path.join(MODEL_DIR, filename))
 
+# ===============================
+# NumPy backward-compatibility patch
+# ===============================
+import sys
+import numpy as np
+
+# Alias old NumPy internal paths used by legacy pickles
+sys.modules["numpy._core"] = np.core
+sys.modules["numpy._core.multiarray"] = np.core.multiarray
+sys.modules["numpy._core.umath"] = np.core.umath
 
 pipeline = load_pipeline()
 
@@ -301,3 +318,4 @@ elif mode == "Predict from SMILES":
             single_smiles_predict(smiles_input, models)
         else:
             st.warning("Please enter a SMILES string.")
+
