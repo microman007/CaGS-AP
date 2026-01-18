@@ -14,10 +14,12 @@ from rdkit import Chem
 from rdkit.Chem import AllChem, MACCSkeys
 from rdkit.Chem import Draw
 from rdkit import RDLogger
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
 from fpdf import FPDF
-
+from PIL import Image
 
 # ===============================
 # HEADER — LOGO + FULL-WIDTH TITLE
@@ -385,6 +387,7 @@ else:
 
     if st.button("Predict Activity"):
         single_smiles_predict(smiles_input, models)
+
 
 
 
