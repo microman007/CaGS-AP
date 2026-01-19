@@ -53,7 +53,7 @@ with st.container():
     try:
         if os.path.exists("App_Logo.png"):
             logo = Image.open("App_Logo.png")
-            st.image(logo, width=300) # Adjusted width for better fit
+            st.image(logo, width=2000) # Adjusted width for better fit
     except:
         pass
 
@@ -428,3 +428,4 @@ else:
             single_smiles_predict(smiles_input, models)
         else:
             st.warning("Please enter a SMILES string.")
+
