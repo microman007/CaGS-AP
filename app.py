@@ -13,17 +13,21 @@ import warnings
 from rdkit import Chem
 from rdkit.Chem import AllChem, MACCSkeys
 from rdkit.Chem import Draw
+from rdkit.Chem import rdFingerprintGenerator  # NEW IMPORT
 from rdkit import RDLogger
 import matplotlib.pyplot as plt
 import seaborn as sns
 from fpdf import FPDF
+from PIL import Image
 
+# ===============================
+# PAGE CONFIG
+# ===============================
+st.set_page_config(page_title="CaGS-AP Prediction", layout="wide")
 
 # ===============================
 # HEADER — LOGO + FULL-WIDTH TITLE
 # ===============================
-from PIL import Image
-
 st.markdown("""
 <style>
 .header-box{
@@ -47,8 +51,9 @@ with st.container():
 
     # ---- LOGO ----
     try:
-        logo = Image.open("App_Logo.png")
-        st.image(logo, width=2000)
+        if os.path.exists("App_Logo.png"):
+            logo = Image.open("App_Logo.png")
+            st.image(logo, width=300) # Adjusted width for better fit
     except:
         pass
 
@@ -102,7 +107,7 @@ def get_output_dirs():
 
 
 # ===============================
-# LOADERS
+# LOADERS (OPTIMIZED WITH CACHING)
 # ===============================
 @st.cache_resource
 def load_pipeline():
@@ -112,29 +117,40 @@ def load_pipeline():
     tools["feat_selector"] = joblib.load(os.path.join(MODEL_DIR,"model_feature_selector.pkl"))
     return tools
 
+@st.cache_resource
 def load_model_file(filename):
     return joblib.load(os.path.join(MODEL_DIR, filename))
 
 pipeline = load_pipeline()
 
 
-
 # ===============================
-# FINGERPRINTS
+# FINGERPRINTS (UPDATED for RDKit 2024+)
 # ===============================
 def fingerprints_from_smiles(smiles):
     mol = Chem.MolFromSmiles(str(smiles))
     if mol is None:
         return None
-    ecfp = AllChem.GetMorganFingerprintAsBitVect(mol,2,nBits=1024)
-    fcfp = AllChem.GetMorganFingerprintAsBitVect(mol,2,nBits=1024,useFeatures=True)
-    maccs = MACCSkeys.GenMACCSKeys(mol)
-    return np.concatenate([np.array(ecfp),np.array(fcfp),np.array(maccs)])
+    
+    # NEW: Use rdFingerprintGenerator instead of deprecated AllChem calls
+    # 1. ECFP (Morgan, radius 2)
+    mfgen = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=1024)
+    ecfp = mfgen.GetFingerprint(mol)
 
+    # 2. FCFP (Morgan, radius 2, useFeatures=True)
+    # Note: We use atomInvariantsGenerator to simulate feature-based invariants
+    inv_gen = rdFingerprintGenerator.GetMorganFeatureAtomInvGen()
+    mfgen_feat = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=1024, atomInvariantsGenerator=inv_gen)
+    fcfp = mfgen_feat.GetFingerprint(mol)
+
+    # 3. MACCS Keys
+    maccs = MACCSkeys.GenMACCSKeys(mol)
+    
+    return np.concatenate([np.array(ecfp), np.array(fcfp), np.array(maccs)])
 
 
 # ===============================
-# SCREENING ENGINE (Phase-1)
+# SCREENING ENGINE (OPTIMIZED)
 # ===============================
 def run_screening(df, smiles_col, models):
 
@@ -142,14 +158,17 @@ def run_screening(df, smiles_col, models):
     total=len(df)
     prog=st.progress(0.0)
 
-    for i in range(0,total,CHUNK_SIZE):
+    # OPTIMIZATION: Load selected models once BEFORE the loop
+    loaded_models = {m: load_model_file(AVAILABLE_MODELS[m]) for m in models}
 
-        chunk=df.iloc[i:i+CHUNK_SIZE].copy()
-        fps=[]
-        keep=[]
+    for i in range(0, total, CHUNK_SIZE):
 
-        for j,s in enumerate(chunk[smiles_col]):
-            fp=fingerprints_from_smiles(s)
+        chunk = df.iloc[i:i+CHUNK_SIZE].copy()
+        fps = []
+        keep = []
+
+        for j, s in enumerate(chunk[smiles_col]):
+            fp = fingerprints_from_smiles(s)
             if fp is not None:
                 fps.append(fp)
                 keep.append(chunk.index[j])
@@ -157,61 +176,67 @@ def run_screening(df, smiles_col, models):
         if not fps:
             continue
 
-        X=pd.DataFrame(fps,index=keep)
+        X = pd.DataFrame(fps, index=keep)
 
-        X=pipeline["var_thresh"].transform(X)
-        X=pipeline["feat_selector"].transform(X)
-        X=pipeline["scaler"].transform(X)
+        # Apply pipeline transformations
+        X = pipeline["var_thresh"].transform(X)
+        X = pipeline["feat_selector"].transform(X)
+        X = pipeline["scaler"].transform(X)
 
-        results=chunk.loc[keep].copy()
-        pcols=[]
+        results = chunk.loc[keep].copy()
+        pcols = []
 
         for m in models:
-            model=load_model_file(AVAILABLE_MODELS[m])
+            # Use pre-loaded model from dictionary
+            model = loaded_models[m]
 
-            preds=model.predict(X)
-            results[f"{m}_Pred"]=preds
+            preds = model.predict(X)
+            results[f"{m}_Pred"] = preds
 
-            if hasattr(model,"predict_proba"):
-                prob=model.predict_proba(X)[:,1]
-                cname=f"{m}_Prob"
-                results[cname]=np.round(prob,4)
+            if hasattr(model, "predict_proba"):
+                prob = model.predict_proba(X)[:, 1]
+                cname = f"{m}_Prob"
+                results[cname] = np.round(prob, 4)
                 pcols.append(cname)
 
         if pcols:
-            results["Consensus_Probability"]=results[pcols].mean(axis=1)
+            results["Consensus_Probability"] = results[pcols].mean(axis=1)
 
         all_results.append(results)
 
-        prog.progress(min((i+len(chunk))/total,1.0))
+        prog.progress(min((i+len(chunk))/total, 1.0))
 
     prog.empty()
 
-    final=pd.concat(all_results)
-
-    if "Consensus_Probability" in final:
-        final=final.sort_values("Consensus_Probability",ascending=False)
-
-    return final.reset_index(drop=True)
-
+    if all_results:
+        final = pd.concat(all_results)
+        if "Consensus_Probability" in final:
+            final = final.sort_values("Consensus_Probability", ascending=False)
+        return final.reset_index(drop=True)
+    else:
+        return pd.DataFrame()
 
 
 # ===============================
-# Phase-6 Metrics
+# METRICS & SCORING
 # ===============================
 def compute_consensus_metrics(results_df):
-
     pred_cols = [c for c in results_df.columns if c.endswith("_Pred")]
     prob_cols = [c for c in results_df.columns if c.endswith("_Prob")]
 
-    results_df["Mean_Prob"] = results_df[prob_cols].mean(axis=1)
-    results_df["Prob_SD"] = results_df[prob_cols].std(axis=1)
-    results_df["Model_Vote"] = results_df[pred_cols].sum(axis=1)
+    if prob_cols:
+        results_df["Mean_Prob"] = results_df[prob_cols].mean(axis=1)
+        results_df["Prob_SD"] = results_df[prob_cols].std(axis=1)
+    
+    if pred_cols:
+        results_df["Model_Vote"] = results_df[pred_cols].sum(axis=1)
 
     return results_df
 
 
 def assign_confidence(row):
+    if "Prob_SD" not in row:
+        return "N/A"
     if row["Prob_SD"] < 0.05:
         return "High"
     elif row["Prob_SD"] < 0.15:
@@ -219,75 +244,68 @@ def assign_confidence(row):
     return "Low"
 
 
-
 # ===============================
-# Scaffold SAR
+# SCAFFOLD SAR
 # ===============================
 def get_scaffold(smiles):
-    mol = Chem.MolFromSmiles(smiles)
-    if mol:
-        return Chem.MolToSmiles(MurckoScaffold.GetScaffoldForMol(mol))
+    try:
+        mol = Chem.MolFromSmiles(str(smiles))
+        if mol:
+            return Chem.MolToSmiles(MurckoScaffold.GetScaffoldForMol(mol))
+    except:
+        return None
     return None
 
 
-
 # ===============================
-# Phase-2 Plot
+# PLOTTING
 # ===============================
-def plot_probability(results_df, dirs):
-
-    probs=results_df["Consensus_Probability"]
-
-    fig,ax=plt.subplots(figsize=(8,5),dpi=300)
-    sns.histplot(probs,kde=True,bins=30,color="#1f77b4",edgecolor="black",ax=ax)
-
+def plot_probability(results_df):
+    if "Consensus_Probability" not in results_df:
+        return
+    
+    probs = results_df["Consensus_Probability"]
+    fig, ax = plt.subplots(figsize=(8, 5), dpi=300)
+    sns.histplot(probs, kde=True, bins=30, color="#1f77b4", edgecolor="black", ax=ax)
+    ax.set_title("Distribution of Predicted Probabilities")
     plt.tight_layout()
     st.pyplot(fig)
 
 
+def plot_heatmap(results_df):
+    prob_cols = [c for c in results_df.columns if c.endswith("_Prob")]
+    if not prob_cols:
+        return
 
-# ===============================
-# Phase-3 Heatmap
-# ===============================
-def plot_heatmap(results_df, dirs):
-
-    prob_cols=[c for c in results_df.columns if c.endswith("_Prob")]
-    data=results_df[prob_cols].head(30)
-
-    fig,ax=plt.subplots(figsize=(8,6),dpi=300)
-    sns.heatmap(data,cmap="viridis",ax=ax)
-
+    data = results_df[prob_cols].head(30)
+    fig, ax = plt.subplots(figsize=(8, 6), dpi=300)
+    sns.heatmap(data, cmap="viridis", ax=ax, annot=True, fmt=".2f")
+    ax.set_title("Heatmap of Top 30 Predictions")
     plt.tight_layout()
     st.pyplot(fig)
 
 
-
 # ===============================
-# Phase-4 Interpretation
+# SINGLE-SMILES PREDICTOR
 # ===============================
-def model_interpretation():
-    st.info("""
-• Higher probability = stronger predicted inhibitor  
-• Consensus probability = model-averaged confidence
-""")
-
-
-# =========================================================
-# 🚀 NEW — SINGLE-SMILES PREDICTOR (MATCHES CSV MODE)
-# =========================================================
 def single_smiles_predict(smiles, models):
 
-    mol = Chem.MolFromSmiles(smiles)
+    mol = Chem.MolFromSmiles(str(smiles))
     if mol is None:
         st.error("❌ Invalid SMILES string.")
         return
 
     # ----- Show molecule -----
-    st.image(Draw.MolToImage(mol, size=(300,300)))
+    st.image(Draw.MolToImage(mol, size=(300,300)), caption="Structure Preview")
 
     fp = fingerprints_from_smiles(smiles)
+    if fp is None:
+        st.error("Could not generate fingerprints.")
+        return
+
     X = pd.DataFrame([fp])
 
+    # Transform
     X = pipeline["var_thresh"].transform(X)
     X = pipeline["feat_selector"].transform(X)
     X = pipeline["scaler"].transform(X)
@@ -301,8 +319,11 @@ def single_smiles_predict(smiles, models):
         pred = int(model.predict(X)[0])
         votes += pred
 
-        prob = float(model.predict_proba(X)[0,1])
-        prob_dict[m] = prob
+        if hasattr(model, "predict_proba"):
+            prob = float(model.predict_proba(X)[0, 1])
+            prob_dict[m] = prob
+        else:
+            prob_dict[m] = float(pred) # Fallback if no proba
 
     probs = list(prob_dict.values())
     mean_prob = np.mean(probs)
@@ -323,29 +344,20 @@ def single_smiles_predict(smiles, models):
     st.write(f"Model Vote: **{votes}/{len(models)}**")
     st.write(f"Std Dev: **{sd_prob:.4f}**")
     st.write(f"Confidence: **{conf}**")
-    st.write(f"Scaffold: `{scaffold}`")
+    if scaffold:
+        st.write(f"Scaffold: `{scaffold}`")
 
     st.write("### Model-wise Probabilities")
-    st.table(pd.DataFrame(prob_dict,index=["Probability"]).T)
-
-
-
-# ===============================
-# UI
-# ===============================
-st.title("🧬 CaGS-AP: Candida albicans β-1,3-glucan synthase — Activity Predictor")
-st.caption("Machine-learning prediction of β-1,3-Glucan Synthase inhibitors")
-st.markdown("---")
-
-dirs=get_output_dirs()
+    st.table(pd.DataFrame(prob_dict, index=["Probability"]).T)
 
 
 # ===============================
-# SIDEBAR
+# UI - SIDEBAR & MAIN
 # ===============================
+dirs = get_output_dirs()
+
 st.sidebar.header("Input Mode")
-
-mode=st.sidebar.radio("Choose Option",["Upload CSV","Predict from SMILES"])
+mode = st.sidebar.radio("Choose Option", ["Upload CSV", "Predict from SMILES"])
 
 models = st.sidebar.multiselect(
     "Select Models",
@@ -353,39 +365,66 @@ models = st.sidebar.multiselect(
     default=list(AVAILABLE_MODELS.keys())
 )
 
-
 # ===============================
-# MODE-1
+# MODE-1: CSV UPLOAD
 # ===============================
-if mode=="Upload CSV":
+if mode == "Upload CSV":
 
-    up=st.sidebar.file_uploader("Upload CSV",type=["csv"])
+    up = st.sidebar.file_uploader("Upload CSV", type=["csv"])
 
     if up:
-        df=pd.read_csv(up)
-
+        df = pd.read_csv(up)
+        # Find SMILES column case-insensitive
         smiles_col = next((c for c in df.columns if "smile" in c.lower()), None)
 
+        if smiles_col:
+            st.success(f"✅ Found SMILES column: `{smiles_col}`")
+        else:
+            st.error("❌ No column with 'SMILE' or 'smiles' found in CSV.")
+
         if st.button("Start Virtual Screening"):
+            if not smiles_col:
+                st.error("Please ensure your CSV has a SMILES column.")
+            else:
+                with st.spinner("Screening compounds..."):
+                    results = run_screening(df, smiles_col, models)
+                    
+                    if not results.empty:
+                        results = compute_consensus_metrics(results)
+                        results["Confidence"] = results.apply(assign_confidence, axis=1)
+                        results["Scaffold"] = results[smiles_col].apply(get_scaffold)
 
-            results = run_screening(df, smiles_col, models)
-            results = compute_consensus_metrics(results)
-            results["Confidence"] = results.apply(assign_confidence, axis=1)
-            results["Scaffold"] = results[smiles_col].apply(get_scaffold)
-
-            st.dataframe(results)
-
+                        st.subheader("Results")
+                        st.dataframe(results)
+                        
+                        # Download Button
+                        csv = results.to_csv(index=False).encode('utf-8')
+                        st.download_button(
+                            "Download Results CSV",
+                            csv,
+                            "cags_screening_results.csv",
+                            "text/csv",
+                            key='download-csv'
+                        )
+                        
+                        # Plots
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            plot_probability(results)
+                        with col2:
+                            plot_heatmap(results)
+                    else:
+                        st.warning("No valid results generated.")
 
 # ===============================
-# MODE-2
+# MODE-2: SMILES INPUT
 # ===============================
 else:
     st.subheader("🔍 Predict Activity from SMILES")
-    smiles_input = st.text_area("Paste SMILES here:")
+    smiles_input = st.text_area("Paste SMILES here:", height=100)
 
     if st.button("Predict Activity"):
-        single_smiles_predict(smiles_input, models)
-
-
-
-
+        if smiles_input:
+            single_smiles_predict(smiles_input, models)
+        else:
+            st.warning("Please enter a SMILES string.")
