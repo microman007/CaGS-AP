@@ -2,7 +2,8 @@
 # CaGS-AP — RDKit-FREE Streamlit Application
 # Stable for Streamlit Cloud Deployment
 # ============================================================
-
+from rdkit import Chem
+from rdkit.Chem import AllChem, DataStructs
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -226,3 +227,4 @@ else:
         "👈 Upload a CSV file containing **precomputed molecular fingerprints** "
         "to start virtual screening."
     )
+
