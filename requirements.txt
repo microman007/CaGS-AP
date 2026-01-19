@@ -3,8 +3,8 @@ pandas
 numpy
 rdkit
 joblib
-scikit-learn
+scikit-learn==1.6.1
 matplotlib
 seaborn
 fpdf
-imblearn
+imbalanced-learn
