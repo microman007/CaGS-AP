@@ -33,19 +33,11 @@ CaGS-AP allows users to:
 The tool is implemented in **Python + Streamlit**, supporting both **batch screening** and **single-molecule prediction** modes.
 ---
 
-## 📥 Download & Run
+## 🚀 Quick Access (Web App)
 
-### 1️⃣ Clone the repository
-git clone https://github.com/microman007/CaGS-AP.git
-cd CaGS-AP
+You can access the tool directly without installing anything by visiting the following link:
 
-### 2️⃣ Install dependencies
-pip install -r requirements.txt
-
-### 3️⃣ Run the App
-streamlit run app.py
-
-The app will open in your browser automatically.
+👉 **[Launch CaGS-AP Web App](https://cagsap-fungal-biology-lab.streamlit.app/)**
 
 ---
 ## 📂 Input Format
