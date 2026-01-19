@@ -1,14 +1,7 @@
-streamlit==1.53.0
+streamlit
+pandas
+numpy
+rdkit
+joblib
+scikit-learn
 
-numpy==1.24.4
-scipy==1.10.1
-pandas==1.5.3
-
-scikit-learn==1.0.2
-joblib==1.2.0
-imbalanced-learn==0.10.1
-
-rdkit-pypi==2022.9.5
-
-fpdf
-Pillow
