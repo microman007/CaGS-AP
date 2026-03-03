@@ -20,57 +20,145 @@ import seaborn as sns
 from fpdf import FPDF
 from PIL import Image
 
-# ===============================
+# ============================================================
 # PAGE CONFIG
-# ===============================
-st.set_page_config(page_title="CaGS-AP Prediction", layout="wide")
+# ============================================================
 
-# ===============================
-# HEADER — LOGO + FULL-WIDTH TITLE
-# ===============================
+st.set_page_config(
+    page_title="CaGS-AP | CURAJ",
+    page_icon="🧬",
+    layout="wide"
+)
+# ============================================================
+# GLOBAL CSS
+# ============================================================
 st.markdown("""
 <style>
-.header-box{
+
+/* ===== GLOBAL FONT OVERRIDE (CRITICAL) ===== */
+/* Apply Georgia ONLY to app text */
+.stApp,
+.block-container,
+.title,
+.subtitle,
+.hero,
+.section-title,
+p,
+label,
+h1, h2, h3, h4, h5, h6 {
+    font-family: Georgia, serif !important;
+}
+
+/* ❌ EXCLUDE interactive widgets */
+div[data-testid="stDataFrame"],
+div[role="menu"],
+div[role="menu"] *,
+div[class*="Mui"],
+div[class*="ag-"],
+div[class*="slick"],
+canvas {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont,
+                 "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+}
+    font-family: Georgia, serif !important;
+}
+
+/* Streamlit app background */
+.stApp{
+    background-image:url("background.png");
+    background-size:cover;
+    background-attachment:fixed;
+}
+
+/* Main content container */
+.block-container{
+    background:rgba(255,255,255,0.92);
+    padding:1.8rem;
+    border-radius:20px;
+}
+
+/* Titles */
+.title{
     text-align:center;
-    padding-top:6px;
-}
-.app-title{
-    font-size:30px;
+    font-size:36px;
     font-weight:700;
-    line-height:1.25;
+    color:#1f3c88;
 }
-.app-sub{
+
+.subtitle{
+    text-align:center;
     font-size:15px;
-    color:grey;
+    color:#555;
 }
+
+/* Hero */
+.hero{
+    background:linear-gradient(90deg,#1f4e79,#3c8dbc);
+    padding:22px;
+    border-radius:16px;
+    color:white;
+    text-align:center;
+    margin-bottom:15px;
+}
+
+/* Section titles */
+.section-title{
+    font-size:22px;
+    font-weight:600;
+    text-align:center;
+    margin:10px 0 6px 0;
+}
+
+/* Workflow image */
+.workflow-img img{
+    max-height:280px;
+    object-fit:contain;
+}
+
+/* Morphology images */
+.morph-card img{
+    max-height:110px;
+    border-radius:12px;
+    box-shadow:0 6px 16px rgba(0,0,0,0.2);
+}
+
+/* Info box spacing */
+div[data-testid="stAlert"]{
+    margin-top:8px !important;
+    margin-bottom:14px !important;
+    padding-bottom:12px !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
-with st.container():
-    st.markdown("<div class='header-box'>", unsafe_allow_html=True)
 
-    # ---- LOGO ----
-    try:
-        if os.path.exists("App_Logo.png"):
-            logo = Image.open("App_Logo.png")
-            st.image(logo, width=2000) # Adjusted width for better fit
-    except:
-        pass
+# ============================================================
+# HEADER
+# ============================================================
 
-    # ---- TITLE ----
-    st.markdown("""
-        <div class='app-title'>
-            🧬 CaGS-AP: Candida albicans β-1,3-glucan synthase — Activity Predictor
-        </div>
+st.markdown("<div class='title'>CaGS-AP Info</div>", unsafe_allow_html=True)
+st.markdown("<div class='subtitle'>FPGE Lab | Central University of Rajasthan</div>", unsafe_allow_html=True)
 
-        <div class='app-sub'>
-            Machine-learning prediction of β-1,3-glucan synthase inhibitors
-        </div>
-    """, unsafe_allow_html=True)
+st.markdown("""
+<div class="hero">
+<h2>CaGS-AP</h2>
+<h4>AI-Driven Biosolutions for Antifungal Drug Discovery</h4>
+</div>
+""", unsafe_allow_html=True)
 
-    st.markdown("</div>", unsafe_allow_html=True)
+# ============================================================
+# NAVIGATION
+# ============================================================
 
-st.markdown("---")
+page = st.radio(
+    "Navigation",
+    ["ℹ️ CaGS-AP Overview", "🧪 Activity Predictor"],
+    horizontal=True
+)
+# ============================================================
+# MODEL SETTINGS
+# ============================================================
 
 MODEL_DIR = "final_models"
 CHUNK_SIZE = 10000
@@ -351,81 +439,127 @@ def single_smiles_predict(smiles, models):
     st.table(pd.DataFrame(prob_dict, index=["Probability"]).T)
 
 
-# ===============================
-# UI - SIDEBAR & MAIN
-# ===============================
-dirs = get_output_dirs()
+# ============================================================
+# OVERVIEW PAGE
+# ============================================================
 
-st.sidebar.header("Input Mode")
-mode = st.sidebar.radio("Choose Option", ["Upload CSV", "Predict from SMILES"])
+def show_overview():
 
-models = st.sidebar.multiselect(
-    "Select Models",
-    list(AVAILABLE_MODELS.keys()),
-    default=list(AVAILABLE_MODELS.keys())
+    st.markdown(
+        "<div class='section-title'>Machine Learning Workflow</div>",
+        unsafe_allow_html=True
+    )
+
+    st.markdown("<div class='workflow-img'>", unsafe_allow_html=True)
+    st.image("Graphical_Abstract_1200_dpi.png", width="stretch")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown(
+        "<div class='section-title'><i>Candida albicans</i> Morphological Forms</div>",
+        unsafe_allow_html=True
+    )
+
+    IMG_DIR = "images"
+
+    cols = st.columns(3)
+
+    forms = [
+        ("Yeast_form.png", "Yeast Form"),
+        ("Hyphal_form.png", "Hyphal Form"),
+        ("Bioflim_form.png", "Biofilm")
+    ]
+
+    for col, (img, label) in zip(cols, forms):
+
+        with col:
+
+            st.image(
+                os.path.join(IMG_DIR, img),
+                width=230
+            )
+
+            st.markdown(
+                f"""
+                <div style="
+                    text-align:center;
+                    font-weight:700;
+                    font-size:18px;
+                    font-family: Georgia, serif;
+                    margin-top:-5px;
+                ">
+                    {label}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+# ============================================================
+# PREDICTOR PAGE
+# ============================================================
+
+def show_predictor():
+
+    st.markdown("<div class='section-title'>CaGS-AP Activity Predictor</div>",unsafe_allow_html=True)
+
+    st.sidebar.header("Input Mode")
+
+    mode = st.sidebar.radio("Choose Option",["Upload CSV","Predict from SMILES"])
+
+    models = st.sidebar.multiselect(
+        "Select Models",
+        list(AVAILABLE_MODELS.keys()),
+        default=list(AVAILABLE_MODELS.keys())
+    )
+
+    if mode == "Upload CSV":
+
+        file = st.file_uploader("Upload CSV",type=["csv"])
+
+        if file:
+
+            df = pd.read_csv(file)
+            st.dataframe(df.head())
+
+            smiles_col = next((c for c in df.columns if "smile" in c.lower()),None)
+
+            if st.button("Start Virtual Screening"):
+
+                results = run_screening(df,smiles_col,models)
+
+                results = compute_consensus_metrics(results)
+                results["Confidence"] = results.apply(assign_confidence,axis=1)
+                results["Scaffold"] = results[smiles_col].apply(get_scaffold)
+
+                st.dataframe(results)
+
+                plot_probability(results)
+                plot_heatmap(results)
+
+                st.download_button(
+                    "Download Results",
+                    results.to_csv(index=False),
+                    "CaGS_AP_results.csv"
+                )
+
+    else:
+
+        smiles = st.text_area("Paste SMILES here:")
+
+        if st.button("Predict Activity"):
+            single_smiles_predict(smiles,models)
+
+# ============================================================
+# ROUTER
+# ============================================================
+
+if page == "ℹ️ CaGS-AP Overview":
+    show_overview()
+else:
+    show_predictor()
+
+st.info(
+    "**CaGS-AP** is an AI-driven platform for predicting inhibitors of "
+    "*Candida albicans* **β-1,3-glucan synthase**, supporting antifungal drug discovery."
 )
 
-# ===============================
-# MODE-1: CSV UPLOAD
-# ===============================
-if mode == "Upload CSV":
-
-    up = st.sidebar.file_uploader("Upload CSV", type=["csv"])
-
-    if up:
-        df = pd.read_csv(up)
-        # Find SMILES column case-insensitive
-        smiles_col = next((c for c in df.columns if "smile" in c.lower()), None)
-
-        if smiles_col:
-            st.success(f"✅ Found SMILES column: `{smiles_col}`")
-        else:
-            st.error("❌ No column with 'SMILE' or 'smiles' found in CSV.")
-
-        if st.button("Start Virtual Screening"):
-            if not smiles_col:
-                st.error("Please ensure your CSV has a SMILES column.")
-            else:
-                with st.spinner("Screening compounds..."):
-                    results = run_screening(df, smiles_col, models)
-                    
-                    if not results.empty:
-                        results = compute_consensus_metrics(results)
-                        results["Confidence"] = results.apply(assign_confidence, axis=1)
-                        results["Scaffold"] = results[smiles_col].apply(get_scaffold)
-
-                        st.subheader("Results")
-                        st.dataframe(results)
-                        
-                        # Download Button
-                        csv = results.to_csv(index=False).encode('utf-8')
-                        st.download_button(
-                            "Download Results CSV",
-                            csv,
-                            "cags_screening_results.csv",
-                            "text/csv",
-                            key='download-csv'
-                        )
-                        
-                        # Plots
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            plot_probability(results)
-                        with col2:
-                            plot_heatmap(results)
-                    else:
-                        st.warning("No valid results generated.")
-
-# ===============================
-# MODE-2: SMILES INPUT
-# ===============================
-else:
-    st.subheader("🔍 Predict Activity from SMILES")
-    smiles_input = st.text_area("Paste SMILES here:", height=100)
-
-    if st.button("Predict Activity"):
-        if smiles_input:
-            single_smiles_predict(smiles_input, models)
-        else:
-            st.warning("Please enter a SMILES string.")
 
