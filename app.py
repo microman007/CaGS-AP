@@ -10,6 +10,7 @@ import datetime
 from sklearn.neighbors import NearestNeighbors
 from rdkit.Chem.Scaffolds import MurckoScaffold
 import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
 from rdkit import Chem
 from rdkit.Chem import AllChem, MACCSkeys
 from rdkit.Chem import Draw
