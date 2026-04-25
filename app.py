@@ -522,6 +522,7 @@ def show_predictor():
 
             # FIX 2: handle Excel 'sep=,' issue
             if len(df.columns) > 0 and "sep=" in str(df.columns[0]).lower():
+                file.seek(0)
                 df = pd.read_csv(file, low_memory=False, skiprows=1)
 
             # FIX 3: clean column names
