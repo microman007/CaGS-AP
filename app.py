@@ -497,7 +497,6 @@ def show_overview():
 # ============================================================
 # PREDICTOR PAGE
 # ============================================================
-
 def show_predictor():
 
     st.markdown("<div class='section-title'>CaGS-AP Activity Predictor</div>",unsafe_allow_html=True)
@@ -518,26 +517,30 @@ def show_predictor():
 
         if file:
 
-            # FIX 1: safer CSV loading
+            # FIX 1: initial load
             df = pd.read_csv(file, low_memory=False)
 
-            # FIX 2: clean column names (removes hidden spaces)
+            # FIX 2: handle Excel 'sep=,' issue
+            if len(df.columns) > 0 and "sep=" in str(df.columns[0]).lower():
+                df = pd.read_csv(file, low_memory=False, skiprows=1)
+
+            # FIX 3: clean column names
             df.columns = df.columns.str.strip()
 
             st.dataframe(df.head())
 
-            # DEBUG (optional, can remove later)
+            # DEBUG (optional)
             st.write("Detected columns:", df.columns.tolist())
 
-            # FIX 3: auto-detect SMILES column
+            # FIX 4: auto-detect SMILES column
             smiles_col = next((c for c in df.columns if "smile" in c.lower()), None)
 
-            # FIX 4: fallback manual selection if auto fails
+            # FIX 5: fallback manual selection
             if smiles_col is None:
                 st.warning("SMILES column not auto-detected. Please select manually.")
                 smiles_col = st.selectbox("Select SMILES column", df.columns)
 
-            # FIX 5: final validation (prevents crash)
+            # FIX 6: final validation
             if smiles_col not in df.columns:
                 st.error("Invalid SMILES column selected.")
                 st.stop()
