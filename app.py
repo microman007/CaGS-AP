@@ -518,10 +518,29 @@ def show_predictor():
 
         if file:
 
-            df = pd.read_csv(file)
+            # FIX 1: safer CSV loading
+            df = pd.read_csv(file, low_memory=False)
+
+            # FIX 2: clean column names (removes hidden spaces)
+            df.columns = df.columns.str.strip()
+
             st.dataframe(df.head())
 
-            smiles_col = next((c for c in df.columns if "smile" in c.lower()),None)
+            # DEBUG (optional, can remove later)
+            st.write("Detected columns:", df.columns.tolist())
+
+            # FIX 3: auto-detect SMILES column
+            smiles_col = next((c for c in df.columns if "smile" in c.lower()), None)
+
+            # FIX 4: fallback manual selection if auto fails
+            if smiles_col is None:
+                st.warning("SMILES column not auto-detected. Please select manually.")
+                smiles_col = st.selectbox("Select SMILES column", df.columns)
+
+            # FIX 5: final validation (prevents crash)
+            if smiles_col not in df.columns:
+                st.error("Invalid SMILES column selected.")
+                st.stop()
 
             if st.button("Start Virtual Screening"):
 
@@ -548,7 +567,6 @@ def show_predictor():
 
         if st.button("Predict Activity"):
             single_smiles_predict(smiles,models)
-
 # ============================================================
 # ROUTER
 # ============================================================
