@@ -162,7 +162,7 @@ page = st.radio(
 # ============================================================
 
 MODEL_DIR = "final_models"
-CHUNK_SIZE = 10000
+CHUNK_SIZE = 1000
 
 AVAILABLE_MODELS = {
     "Logistic Regression": "tuned_logistic_regression_model.pkl",
@@ -554,7 +554,8 @@ def show_predictor():
                 results["Confidence"] = results.apply(assign_confidence,axis=1)
                 results["Scaffold"] = results[smiles_col].apply(get_scaffold)
 
-                st.dataframe(results)
+                st.write("Rows processed:", len(results))
+                st.dataframe(results.head(1000))
 
                 plot_probability(results)
                 plot_heatmap(results)
