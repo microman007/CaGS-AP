@@ -162,7 +162,7 @@ page = st.radio(
 # ============================================================
 
 MODEL_DIR = "final_models"
-CHUNK_SIZE = 1000
+CHUNK_SIZE = 20000
 
 AVAILABLE_MODELS = {
     "Logistic Regression": "tuned_logistic_regression_model.pkl",
@@ -291,14 +291,17 @@ def run_screening(df, smiles_col, models):
         if pcols:
             results["Consensus_Probability"] = results[pcols].mean(axis=1)
 
-        all_results.append(results)
+        if i == 0:
+            results.to_csv("temp_results.csv", index=False)
+        else:
+            results.to_csv("temp_results.csv", mode="a", header=False, index=False)
 
         prog.progress(min((i+len(chunk))/total, 1.0))
 
     prog.empty()
 
     if all_results:
-        final = pd.concat(all_results)
+        final = pd.read_csv("temp_results.csv")
         if "Consensus_Probability" in final:
             final = final.sort_values("Consensus_Probability", ascending=False)
         return final.reset_index(drop=True)
