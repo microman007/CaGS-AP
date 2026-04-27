@@ -243,11 +243,14 @@ def fingerprints_from_smiles(smiles):
 # ===============================
 def run_screening(df, smiles_col, models):
 
-    all_results=[]
-    total=len(df)
-    prog=st.progress(0.0)
+    total = len(df)
+    prog = st.progress(0.0)
 
-    # OPTIMIZATION: Load selected models once BEFORE the loop
+    # ✅ Clear old temp file (IMPORTANT)
+    if os.path.exists("temp_results.csv"):
+        os.remove("temp_results.csv")
+
+    # Load models once
     loaded_models = {m: load_model_file(AVAILABLE_MODELS[m]) for m in models}
 
     for i in range(0, total, CHUNK_SIZE):
@@ -267,7 +270,7 @@ def run_screening(df, smiles_col, models):
 
         X = pd.DataFrame(fps, index=keep)
 
-        # Apply pipeline transformations
+        # Pipeline transforms
         X = pipeline["var_thresh"].transform(X)
         X = pipeline["feat_selector"].transform(X)
         X = pipeline["scaler"].transform(X)
@@ -276,7 +279,6 @@ def run_screening(df, smiles_col, models):
         pcols = []
 
         for m in models:
-            # Use pre-loaded model from dictionary
             model = loaded_models[m]
 
             preds = model.predict(X)
@@ -291,23 +293,28 @@ def run_screening(df, smiles_col, models):
         if pcols:
             results["Consensus_Probability"] = results[pcols].mean(axis=1)
 
+        # ✅ STREAM TO DISK (NO MEMORY OVERLOAD)
         if i == 0:
             results.to_csv("temp_results.csv", index=False)
         else:
             results.to_csv("temp_results.csv", mode="a", header=False, index=False)
 
-        prog.progress(min((i+len(chunk))/total, 1.0))
+        prog.progress(min((i + len(chunk)) / total, 1.0))
 
     prog.empty()
 
-    if all_results:
+    # ✅ ALWAYS READ FINAL RESULT FROM FILE
+    if os.path.exists("temp_results.csv"):
+
         final = pd.read_csv("temp_results.csv")
-        if "Consensus_Probability" in final:
+
+        if "Consensus_Probability" in final.columns:
             final = final.sort_values("Consensus_Probability", ascending=False)
+
         return final.reset_index(drop=True)
+
     else:
         return pd.DataFrame()
-
 
 # ===============================
 # METRICS & SCORING
