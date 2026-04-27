@@ -162,7 +162,7 @@ page = st.radio(
 # ============================================================
 
 MODEL_DIR = "final_models"
-CHUNK_SIZE = 20000
+CHUNK_SIZE = 1000
 
 AVAILABLE_MODELS = {
     "Logistic Regression": "tuned_logistic_regression_model.pkl",
